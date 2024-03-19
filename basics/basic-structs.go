@@ -16,12 +16,18 @@ func (p Pessoa) Apresentar() {
 	fmt.Printf("Ola, meu nome é %s e tenho %d anos", p.Nome, p.Idade)
 }
 
-func (p Pessoa) isAdult() bool {
+func (p Pessoa) IsAdult() bool {
 	if p.Idade > 18 {
 		return true
 
 	}
 	return false
+}
+
+// you can create methods assigned to pointers instead of types
+// it allows the struct value mutation
+func (p *Pessoa) GetOlder() int {
+	return p.Idade + 1
 }
 
 // interfaces are like struct but for methods
@@ -41,10 +47,14 @@ func (c Cachorro) SoundEmmit() string {
 
 func main() {
 	pessoa := Pessoa{Nome: "Felipe", Idade: 24, Email: "teste@email.com"}
-
+	fmt.Println("Created person")
 	fmt.Println(pessoa.Nome, pessoa.Idade)
+	fmt.Println("Updating age")
+	fmt.Println(pessoa.GetOlder())
+	fmt.Println("Presenting")
 	pessoa.Apresentar()
 
+	fmt.Println("Interface usage")
 	var animal Animal
 	animal = Cachorro{Nome: "Bolinha"}
 	fmt.Println(animal.SoundEmmit())
