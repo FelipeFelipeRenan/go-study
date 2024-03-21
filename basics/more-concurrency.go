@@ -2,8 +2,6 @@ package main
 
 import "fmt"
 
-
-
 func calcularFatorial(n int) int {
 	resultado := 1
 	for i := 1; i < n; i++ {
@@ -12,17 +10,21 @@ func calcularFatorial(n int) int {
 	return resultado
 }
 func main() {
-	numeros := []int{5,10,15}
+	numeros := []int{5, 10, 15}
+
+	// creaing a channel to get the values from factoral
 	resultados := make(chan int)
 
 	for _, value := range numeros {
-		go func(n int)  {
+		// creaing am amonymouss function using goroutine to compute the factorial
+		// and pass the value to resoltados channel 
+		go func(n int) {
 			resultados <- calcularFatorial(n)
 		}(value)
-		
+
 	}
 
-	for range numeros{
-		fmt.Println("Fatorial: ", <- resultados)
+	for range numeros {
+		fmt.Println("Fatorial: ", <-resultados)
 	}
 }
