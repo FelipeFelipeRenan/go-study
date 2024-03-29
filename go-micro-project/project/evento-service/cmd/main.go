@@ -36,6 +36,9 @@ func main() {
 
 	router.POST("/events", eventHandler.CreateEvent)
 	router.GET("/events/:id", eventHandler.GetEventByID)
+	router.DELETE("/events/:id", eventHandler.DeleteEvent)
+	router.PUT("/events/:id", eventHandler.UpdateEvent)
+
 
 	log.Println("Servidor iniciado em http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

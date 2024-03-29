@@ -45,3 +45,32 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, event)
 }
+
+func (h *EventHandler) UpdateEvent(c *gin.Context)  {
+	var event models.Event
+	if err := c.BindJSON(&event); err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	err := h.repo.UpdateEvent(c, &event)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event"})
+		return
+	}
+	c.JSON(http.StatusOK, event)
+}
+
+func (h *EventHandler) DeleteEvent(c *gin.Context){
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error":"Invalid event ID"})
+		return
+	}
+	err = h.repo.DeleteEvent(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to delete event"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
+}
