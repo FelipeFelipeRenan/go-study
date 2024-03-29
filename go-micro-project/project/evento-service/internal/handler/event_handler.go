@@ -17,6 +17,15 @@ func NewEventHandler(repo *repository.EventRepository) *EventHandler {
 	return &EventHandler{repo: repo}
 }
 
+// CreateEvent cria um novo evento com os dados fornecidos.
+//	@Summary		Cria um novo evento
+//	@Description	Cria um novo evento com os dados fornecidos
+//	@Tags			Eventos
+//	@Accept			json
+//	@Produce		json
+//	@Param			requestBody	body		Event	true	"Dados do evento a ser criado"
+//	@Success		201			{object}	Event
+//	@Router			/events [post]
 func (h *EventHandler) CreateEvent(c *gin.Context) {
 	var event models.Event
 	if err := c.BindJSON(&event); err != nil {
@@ -31,6 +40,15 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	c.JSON(http.StatusCreated, event)
 }
 
+// GetEventByID retorna um evento com base no ID fornecido.
+//	@Summary		Retorna um evento por ID
+//	@Description	Retorna um evento com base no ID fornecido
+//	@Tags			Eventos
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int	true	"ID do evento a ser retornado"
+//	@Success		200	{object}	Event
+//	@Router			/events/{id} [get]
 func (h *EventHandler) GetEventByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
@@ -46,9 +64,19 @@ func (h *EventHandler) GetEventByID(c *gin.Context) {
 	c.JSON(http.StatusOK, event)
 }
 
-func (h *EventHandler) UpdateEvent(c *gin.Context)  {
+// UpdateEvent atualiza um evento com base nos dados fornecidos.
+//	@Summary		Atualiza um evento
+//	@Description	Atualiza um evento com base nos dados fornecidos
+//	@Tags			Eventos
+//	@Accept			json
+//	@Produce		json
+//	@Param			id			path		int		true	"ID do evento a ser atualizado"
+//	@Param			requestBody	body		Event	true	"Novos dados do evento"
+//	@Success		200			{object}	Event
+//	@Router			/events/{id} [put]
+func (h *EventHandler) UpdateEvent(c *gin.Context) {
 	var event models.Event
-	if err := c.BindJSON(&event); err != nil{
+	if err := c.BindJSON(&event); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -60,16 +88,25 @@ func (h *EventHandler) UpdateEvent(c *gin.Context)  {
 	c.JSON(http.StatusOK, event)
 }
 
-func (h *EventHandler) DeleteEvent(c *gin.Context){
+// DeleteEvent exclui um evento com base no ID fornecido.
+//	@Summary		Exclui um evento
+//	@Description	Exclui um evento com base no ID fornecido
+//	@Tags			Eventos
+//	@Accept			json
+//	@Produce		json
+//	@Param			id	path		int		true	"ID do evento a ser excluído"
+//	@Success		200	{string}	string	"Evento excluído com sucesso"
+//	@Router			/events/{id} [delete]
+func (h *EventHandler) DeleteEvent(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":"Invalid event ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
 		return
 	}
 	err = h.repo.DeleteEvent(c, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to delete event"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete event"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Event deleted successfully"})
