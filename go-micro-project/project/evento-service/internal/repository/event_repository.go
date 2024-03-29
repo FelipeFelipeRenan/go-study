@@ -30,3 +30,19 @@ func (r *EventRepository) GetEventByID(ctx context.Context, id int) (*models.Eve
 	}
 	return &event, nil
 }
+
+func (r *EventRepository) UpdateEvent(ctx context.Context, event *models.Event) error {
+	result := r.db.Save(event)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (r *EventRepository) DeleteEvent(ctx context.Context, id int) error {
+	result := r.db.Delete(&models.Event{}, id)
+	if result.Error != nil{
+		return result.Error
+	}
+	return nil
+}
