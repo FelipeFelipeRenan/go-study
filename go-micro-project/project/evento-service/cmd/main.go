@@ -49,6 +49,9 @@ func main() {
 	eventHandler := handler.NewEventHandler(eventRepo)
 
 	router := gin.Default()
+	
+	router.GET("/swagger", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 
 	router.POST("/events", eventHandler.CreateEvent)
 	router.GET("/events/:id", eventHandler.GetEventByID)
