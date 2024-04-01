@@ -12,8 +12,12 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/swaggo/files"       // swagger embed files
+	"evento-service/cmd/docs"
+
+
 	"github.com/swaggo/gin-swagger" // gin-swagger middleware
+	 "github.com/swaggo/files" // swagger embed files
+	
 )
 
 func main() {
@@ -49,8 +53,11 @@ func main() {
 	eventHandler := handler.NewEventHandler(eventRepo)
 
 	router := gin.Default()
+
+	docs.SwaggerInfo.BasePath = "/api/v1"
+
 	
-	router.GET("/swagger", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	router.GET("/api/v1/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 
 	router.POST("/events", eventHandler.CreateEvent)
