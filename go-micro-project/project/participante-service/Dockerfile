@@ -5,16 +5,17 @@ FROM golang:1.22 AS builder
 WORKDIR /app
 
 # Copia o arquivo go.mod e go.sum
-COPY evento-service/go.mod evento-service/go.sum ./
+COPY participante-service/go.mod participante-service/go.sum ./
 
 # Baixa as dependências do módulo
 RUN go mod download
 
 # Copia o restante do código-fonte
-COPY evento-service/ .
+COPY participante-service/ .
 
 # Compila o código
 RUN go build -o main .
+
 
 # Etapa de construção final
 FROM golang:1.22

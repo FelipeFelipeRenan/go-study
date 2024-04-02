@@ -4,12 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"evento-service/internal/models"
 	"evento-service/internal/repository"
-
+	"github.com/gin-gonic/gin"
 	// Importe o pacote swaggo para as anotações
-	_ "evento-service/cmd/docs"
 )
 
 // EventHandler gerencia os handlers dos eventos.

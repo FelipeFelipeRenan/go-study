@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  db_eventos:
+    image: postgres:latest
+    container_name: db_eventos
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: eventos_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - eventos_data:/var/lib/postgresql/data
+
+  db_participantes:
+    image: postgres:latest
+    container_name: db_participantes
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: participantes_db
+    ports:
+      - "5433:5432"  # Porta diferente para evitar conflito com o outro banco
+    volumes:
+      - participantes_data:/var/lib/postgresql/data
+
+  evento-service:
+    image: felipedev21/evento-service  
+    build:
+      context: .
+      dockerfile: evento-service/Dockerfile
+    container_name: evento-service
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db_eventos
+    environment:
+      DB_HOST: db_eventos
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      DB_NAME: eventos_db
+
+  participante-service:
+    image: participante-service
+    build:
+      context: .
+      dockerfile: participante-service/Dockerfile
+    container_name: participante-service
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db_participantes
+    environment:
+      DB_HOST: db_participantes
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      DB_NAME: participantes_db
+
+volumes:
+  eventos_data:
+  participantes_data:

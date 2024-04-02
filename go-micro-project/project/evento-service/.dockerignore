@@ -1,0 +1,6 @@
+# .dockerignore para o serviço de evento
+
+# Arquivos e diretórios a serem ignorados
+.idea
+.vscode
+bin/
