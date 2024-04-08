@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  db_foods:
+    image: postgres:latest
+    container_name: db_foods
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: foods_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - foods_data:/var/lib/postgresql/data
+
+  foods-service:
+    image: felipedev21/foods-service  
+    build:
+      context: .
+    container_name: foods-service
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db_foods
+    environment:
+      DB_HOST: db_foods
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      DB_NAME: foods_db
+
+
+
+volumes:
+  foods_data:
