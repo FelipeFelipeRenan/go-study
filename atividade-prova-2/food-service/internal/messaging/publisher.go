@@ -1,44 +1,42 @@
 package messaging
 
 import (
-	"fmt"
+	"foods/internal/models"
 
 	"github.com/streadway/amqp"
 )
 
-func PublishFoodCreated(conn *amqp.Connection, foodID int) error  {
-	ch, err := conn.Channel()
-	if err != nil {
-		return err
-	}
+func PublishFoodCreated(ch *amqp.Channel, food *models.Food) error {
 
-	defer ch.Close()
+	exchangeName := "food_exchange"
 
-	q, err := ch.QueueDeclare(
-		"food_created",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
+	err := ch.ExchangeDeclare(exchangeName, "direct", true, false, false, false, nil)
 
 	if err != nil {
 		return err
 	}
-	body := fmt.Sprintf("New food created with ID: %d", foodID)
+
+	queueName := "food_created"
+	_, err = ch.QueueDeclare(queueName, true, false, false, false, nil)
+
+	err = ch.QueueBind(queueName, "", exchangeName, false, nil)
+	if err != nil {
+		return err
+	}
+
+	msgBody := []byte(food.Name)
 	err = ch.Publish(
+		exchangeName,
 		"",
-		q.Name,
 		false,
 		false,
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body: []byte(body),
+			Body:        []byte(msgBody),
 		})
 
-		if err != nil {
-			return err
-		}
-		return nil
+	if err != nil {
+		return err
+	}
+	return nil
 }

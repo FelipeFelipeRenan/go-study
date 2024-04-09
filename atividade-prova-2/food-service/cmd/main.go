@@ -2,6 +2,7 @@ package main
 
 import (
 	"foods/internal/handlers"
+	rabbitmq "foods/internal/messaging"
 	"foods/internal/models"
 	"foods/internal/repository"
 	"log"
@@ -15,7 +16,6 @@ import (
 )
 
 func main() {
-
 	foods := []models.Food{
 		{Name: "Lasanha", Category: "Massas", Quantity: 20, Price: 25.99, ExpirationAt: time.Now().AddDate(0, 1, 0)},          // Expira em 1 mês
 		{Name: "Sushi", Category: "Japonesa", Quantity: 30, Price: 30.50, ExpirationAt: time.Now().AddDate(0, 0, 15)},         // Expira em 15 dias
@@ -29,26 +29,30 @@ func main() {
 		{Name: "Ceviche", Category: "Frutos do mar", Quantity: 15, Price: 28.75, ExpirationAt: time.Now().AddDate(0, 0, 12)},  // Expira em 12 dias
 	}
 
-	
-
-	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+	conn, ch, err := rabbitmq.InitRabbitMQ()
 
 	if err != nil {
-		log.Fatal("Erro ao conectar ao banco de dados", err)
-
+		log.Fatal("Erro ao inicializar o RabbitMQ:", err)
 	}
+	defer conn.Close()
+	defer ch.Close()
 
+	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+	if err != nil {
+		log.Fatal("Erro ao conectar ao banco de dados", err)
+	}
 	defer func() {
 		if sqlDB, err := db.DB(); err == nil {
 			sqlDB.Close()
 		}
 	}()
+
 	// Drop and create the table
 	db.Migrator().DropTable(&models.Food{})
 	if err := db.AutoMigrate(&models.Food{}); err != nil {
 		log.Fatal("Erro ao migrar modelo", err)
 	}
-	
+
 	log.Println("Tabela 'food' criada com sucesso")
 	for _, f := range foods {
 		if err := db.Create(&f).Error; err != nil {
@@ -58,7 +62,7 @@ func main() {
 	log.Println("Seed de dados para participantes concluído com sucesso!")
 
 	foodRepo := repository.NewFoodRepository(db)
-	foodHandler := handlers.NewFoodHandler(foodRepo)
+	foodHandler := handlers.NewFoodHandler(foodRepo, ch)
 
 	router := gin.Default()
 

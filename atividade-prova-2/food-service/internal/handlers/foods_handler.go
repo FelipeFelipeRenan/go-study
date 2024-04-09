@@ -1,68 +1,74 @@
 package handlers
 
 import (
+	rabbitmq "foods/internal/messaging"
 	"foods/internal/models"
 	"foods/internal/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/streadway/amqp"
 )
 
 type FoodHandler struct {
 	repo *repository.FoodRepository
+	ch   *amqp.Channel
 }
 
-func NewFoodHandler(repo *repository.FoodRepository) *FoodHandler{
-	return &FoodHandler{repo: repo}
+func NewFoodHandler(repo *repository.FoodRepository, ch *amqp.Channel) *FoodHandler {
+	return &FoodHandler{repo: repo, ch: ch}
 }
 
-
-func (h *FoodHandler) CreateFood(c *gin.Context){
+func (h *FoodHandler) CreateFood(c *gin.Context) {
 	var food models.Food
-	if err := c.BindJSON(&food); err != nil{
-		c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to create Food"})
+	if err := c.BindJSON(&food); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Food"})
 		return
 	}
-	if err := h.repo.CreateFood(c, &food); err != nil{
+	if err := h.repo.CreateFood(c, &food); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Food"})
-	} 
+	}
+
+	err := rabbitmq.PublishFoodCreated(h.ch, &food)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create food publish"})
+	}
 	c.JSON(http.StatusCreated, food)
 }
 
-func (h *FoodHandler) GetAllFoods(c *gin.Context){
+func (h *FoodHandler) GetAllFoods(c *gin.Context) {
 	foods, err := h.repo.GetAllFoods(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":"Erro ao buscar alimentos"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar alimentos"})
 		return
 	}
 
 	c.JSON(http.StatusOK, foods)
 }
 
-func (h *FoodHandler) GetAllFoodsByCategory(c *gin.Context){
+func (h *FoodHandler) GetAllFoodsByCategory(c *gin.Context) {
 	category := c.Query("category")
 
-	if category == ""{
-		c.JSON(http.StatusBadRequest, gin.H{"error":"O parâmetro 'category' é obrigatório"})
+	if category == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "O parâmetro 'category' é obrigatório"})
 		return
 	}
 
-	foods, err := h.repo.GetAllFoodsByCategory(c,category)
+	foods, err := h.repo.GetAllFoodsByCategory(c, category)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError,gin.H{"error": "Erro ao buscar alimentos por categoria"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar alimentos por categoria"})
 		return
 	}
 
-	if len(foods) == 0{
-		c.JSON(http.StatusNotFound, gin.H{"error":"Não foram encontrada alimentos para a categoria indicada"})
+	if len(foods) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Não foram encontrada alimentos para a categoria indicada"})
 		return
 	}
 	c.JSON(http.StatusOK, foods)
 }
 
-
-func (h *FoodHandler) GetFoodsByID(c *gin.Context){
+func (h *FoodHandler) GetFoodsByID(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -77,9 +83,9 @@ func (h *FoodHandler) GetFoodsByID(c *gin.Context){
 	c.JSON(http.StatusOK, Food)
 }
 
-func (h *FoodHandler) UpdateFood(c *gin.Context){
+func (h *FoodHandler) UpdateFood(c *gin.Context) {
 	var Food models.Food
-	if err := c.BindJSON(&Food); err != nil{
+	if err := c.BindJSON(&Food); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -87,30 +93,29 @@ func (h *FoodHandler) UpdateFood(c *gin.Context){
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":"Invalid food ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid food ID"})
 		return
 	}
 	existingFood, err := h.repo.GetFoodsByID(c, id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error":"Food not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Food not found"})
 		return
 	}
-	
+
 	existingFood.Name = Food.Name
 	existingFood.Category = Food.Category
 	existingFood.Quantity = Food.Quantity
 	existingFood.Price = Food.Price
 	existingFood.ExpirationAt = Food.ExpirationAt
 
-	if err := h.repo.UpdateFood(c, existingFood); err != nil{
+	if err := h.repo.UpdateFood(c, existingFood); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update food"})
 		return
 	}
 	c.JSON(http.StatusOK, existingFood)
 }
 
-
-func (h *FoodHandler) DeleteFood(c *gin.Context){
+func (h *FoodHandler) DeleteFood(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -119,9 +124,8 @@ func (h *FoodHandler) DeleteFood(c *gin.Context){
 	}
 	err = h.repo.DeleteFood(c, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to delete food"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete food"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Food deleted successfully"})
 }
-
