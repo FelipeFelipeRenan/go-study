@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"order-service/internals/handlers"
+	rabbitmq "order-service/internals/messaging"
 	"order-service/internals/models"
 	"order-service/internals/repository"
 
@@ -17,13 +18,13 @@ func main() {
 	if err != nil {
 		log.Fatal("Erro ao conectar ao banco de dados", err)
 
-		defer func(){
-			if sqlDB, err := db.DB(); err == nil{
+		defer func() {
+			if sqlDB, err := db.DB(); err == nil {
 				sqlDB.Close()
 			}
 		}()
 
-		if !db.Migrator().HasTable(&models.Order{}){
+		if !db.Migrator().HasTable(&models.Order{}) {
 			log.Println("Order table")
 			err = db.AutoMigrate(&models.Order{})
 			if err != nil {
@@ -31,9 +32,16 @@ func main() {
 			}
 			log.Println("Tabela Order criada com sucesso")
 		}
+		conn, ch, err := rabbitmq.InitRabbitMQ()
+		if err != nil {
+			log.Fatal("Erro ao inicializar o RabbitMQ:", err)
+		}
+
+		defer conn.Close()
+		defer ch.Close()
 
 		ordeRepo := repository.NewOrderRepository(db)
-		orderHandler := handlers.NewOrderHandler(ordeRepo)
+		orderHandler := handlers.NewOrderHandler(ordeRepo, ch)
 
 		router := gin.Default()
 

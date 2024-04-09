@@ -1,6 +1,10 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"encoding/json"
+
+	"gorm.io/gorm"
+)
 
 type Order struct {
 	gorm.Model
@@ -9,4 +13,8 @@ type Order struct {
 	Quantity   uint    `json:"quantity"`
 	TotalPrice float64 `json:"total_price"`
 	Status     string  `json:"status"`
+}
+
+func (o *Order) ToJSON() ([]byte, error){
+	return json.Marshal(o)
 }
