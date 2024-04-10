@@ -1,16 +1,20 @@
+# Imagem base
 FROM golang:1.22 AS builder
 
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia o restante do código-fonte
-COPY . .
+# Copia o arquivo go.mod e go.sum
+COPY food-service/go.mod food-service/go.sum ./
 
 # Baixa as dependências do módulo
 RUN go mod download
+
+# Copia o restante do código-fonte
+COPY food-service/ .
+
 # Compila o código
 RUN go build -o main ./cmd
-
 
 # Etapa de construção final
 FROM golang:1.22

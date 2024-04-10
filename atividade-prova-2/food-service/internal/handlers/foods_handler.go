@@ -129,3 +129,5 @@ func (h *FoodHandler) DeleteFood(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Food deleted successfully"})
 }
+
+

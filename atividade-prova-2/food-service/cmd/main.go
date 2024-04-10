@@ -2,7 +2,7 @@ package main
 
 import (
 	"foods/internal/handlers"
-	rabbitmq "foods/internal/messaging"
+	// rabbitmq "foods/internal/messaging"
 	"foods/internal/models"
 	"foods/internal/repository"
 	"log"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/streadway/amqp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -28,14 +29,6 @@ func main() {
 		{Name: "Frango grelhado", Category: "Carnes", Quantity: 30, Price: 22.50, ExpirationAt: time.Now().AddDate(0, 1, 15)}, // Expira em 1 mês e 15 dias
 		{Name: "Ceviche", Category: "Frutos do mar", Quantity: 15, Price: 28.75, ExpirationAt: time.Now().AddDate(0, 0, 12)},  // Expira em 12 dias
 	}
-
-	conn, ch, err := rabbitmq.InitRabbitMQ()
-
-	if err != nil {
-		log.Fatal("Erro ao inicializar o RabbitMQ:", err)
-	}
-	defer conn.Close()
-	defer ch.Close()
 
 	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
 	if err != nil {
@@ -60,6 +53,18 @@ func main() {
 		}
 	}
 	log.Println("Seed de dados para participantes concluído com sucesso!")
+
+	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	if err != nil {
+		log.Fatal("Erro ao conectar ao RabbitMQ", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Fatal("Erro ao criar canal", err)
+	}
+	defer conn.Close()
+	defer ch.Close()
 
 	foodRepo := repository.NewFoodRepository(db)
 	foodHandler := handlers.NewFoodHandler(foodRepo, ch)
