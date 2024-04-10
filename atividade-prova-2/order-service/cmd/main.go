@@ -3,11 +3,12 @@ package main
 import (
 	"log"
 	"order-service/internals/handlers"
-	rabbitmq "order-service/internals/messaging"
+	// rabbitmq "order-service/internals/messaging"
 	"order-service/internals/models"
 	"order-service/internals/repository"
 
 	"github.com/gin-gonic/gin"
+	"github.com/streadway/amqp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -32,11 +33,16 @@ func main() {
 			}
 			log.Println("Tabela Order criada com sucesso")
 		}
-		conn, ch, err := rabbitmq.InitRabbitMQ()
+
+		conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 		if err != nil {
-			log.Fatal("Erro ao inicializar o RabbitMQ:", err)
+			log.Fatal("Erro ao conectar ao RabbitMQ", err)
 		}
 
+		ch, err := conn.Channel()
+		if err != nil {
+			log.Fatal("Erro ao criar canal", err)
+		}
 		defer conn.Close()
 		defer ch.Close()
 

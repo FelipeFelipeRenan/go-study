@@ -10,6 +10,7 @@ import (
 const (
 	orderExchangeName  = "order_exchange"
 	orderQueueName = "order_created"
+	routingKey = "order_created"
 )
 
 func PublishOrderCreated(ch *amqp.Channel, order *models.Order) error {
@@ -55,7 +56,7 @@ func PublishOrderCreated(ch *amqp.Channel, order *models.Order) error {
 	}
 	err = ch.Publish(
 		orderExchangeName,
-		"",
+		routingKey,
 		false,
 		false,
 		amqp.Publishing{
