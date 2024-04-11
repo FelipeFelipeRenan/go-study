@@ -13,24 +13,96 @@ services:
       - "5432:5432"
     volumes:
       - foods_data:/var/lib/postgresql/data
+    networks:
+      - food_net
+  
+  db_orders:
+    image: postgres:latest
+    container_name: db_orders
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: orders_db
+    ports:
+      - "5433:5433"
+    volumes:
+      - orders_data:/var/lib/postgresql/data
+    networks:
+      - order_net
 
   foods-service:
     image: felipedev21/foods-service  
     build:
       context: .
+      dockerfile: food-service/Dockerfile
     container_name: foods-service
     restart: always
     ports:
       - "8080:8080"
     depends_on:
       - db_foods
+      - rabbitmq
     environment:
       DB_HOST: db_foods
       DB_USER: postgres
       DB_PASSWORD: 1234
       DB_NAME: foods_db
+      RABBITMQ_HOST: rabbitmq  # Use a variável de ambiente RABBITMQ_HOST
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://rabbitmq:15672"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - food_net
+  
+  orders-service:
+    image: felipedev21/orders-service  
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
+    container_name: orders-service
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - db_orders
+      - rabbitmq
+      - foods-service
+    environment:
+      DB_HOST: db_orders
+      DB_USER: postgres
+      DB_PASSWORD: 1234
+      DB_NAME: orders_db
+      RABBITMQ_HOST: rabbitmq  # Use a variável de ambiente RABBITMQ_HOST
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://rabbitmq:15672"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - order_net
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - food_net
+      - order_net
 
+networks:
+  food_net:
+    driver: bridge  # Usar o driver de bridge para rede interna
+  order_net:
+    driver: bridge  # Usar o driver de bridge para rede interna
 
 volumes:
   foods_data:
+  orders_data:
