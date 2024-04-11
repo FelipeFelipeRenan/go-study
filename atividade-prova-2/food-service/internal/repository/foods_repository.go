@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"foods/internal/models"
+	"log"
 
 	"gorm.io/gorm"
 )
@@ -72,11 +73,12 @@ func (r *FoodRepository) UpdateFoodQuantity(ctx context.Context, id int, quantit
 	var food models.Food
 
 	result := r.db.First(&food, id)
+	log.Println(food.Name)
 	if result.Error != nil {
 		return result.Error
 	}
-	if food.Quantity >= int64(quantity) {
-		food.Quantity -= int64(quantity)
+	if food.Quantity >= int(quantity) {
+		food.Quantity -= int(quantity)
 	}else{
 		return errors.New("Quantidade de comida insuficiente")
 	}

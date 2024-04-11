@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/streadway/amqp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -54,23 +53,9 @@ func main() {
 	}
 	log.Println("Seed de dados para participantes concluído com sucesso!")
 
-	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
-		if err != nil {
-		log.Fatal("Erro ao conectar ao RabbitMQ", err)
-	}
-
-	ch, err := conn.Channel()
-	if err != nil {
-		log.Fatal("Erro ao criar canal", err)
-	}
-
-	log.Println("Conectado ao RabbitMQ")
-
-	defer conn.Close()
-	defer ch.Close()
 
 	foodRepo := repository.NewFoodRepository(db)
-	foodHandler := handlers.NewFoodHandler(foodRepo, ch)
+	foodHandler := handlers.NewFoodHandler(foodRepo)
 
 	router := gin.Default()
 

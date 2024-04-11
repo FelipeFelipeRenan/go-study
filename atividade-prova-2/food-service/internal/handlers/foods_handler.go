@@ -1,23 +1,20 @@
 package handlers
 
 import (
-	rabbitmq "foods/internal/messaging"
 	"foods/internal/models"
 	"foods/internal/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/streadway/amqp"
 )
 
 type FoodHandler struct {
 	repo *repository.FoodRepository
-	ch   *amqp.Channel
 }
 
-func NewFoodHandler(repo *repository.FoodRepository, ch *amqp.Channel) *FoodHandler {
-	return &FoodHandler{repo: repo, ch: ch}
+func NewFoodHandler(repo *repository.FoodRepository) *FoodHandler {
+	return &FoodHandler{repo: repo}
 }
 
 func (h *FoodHandler) CreateFood(c *gin.Context) {
@@ -28,11 +25,6 @@ func (h *FoodHandler) CreateFood(c *gin.Context) {
 	}
 	if err := h.repo.CreateFood(c, &food); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create Food"})
-	}
-
-	err := rabbitmq.PublishFoodCreated(h.ch, &food)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create food publish"})
 	}
 	c.JSON(http.StatusCreated, food)
 }
@@ -130,4 +122,28 @@ func (h *FoodHandler) DeleteFood(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Food deleted successfully"})
 }
 
+func (h *FoodHandler) UpdateFoodQuantity(c *gin.Context) {
 
+	var req struct {
+		FoodID   int `json:"food_id"`
+		Quantity int `json:"quantity"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Request"})
+		return
+	}
+
+	food, err := h.repo.GetFoodsByID(c, req.FoodID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Food not Found"})
+		return
+	}
+
+	if err := h.repo.UpdateFoodQuantity(c, req.FoodID, int(req.Quantity)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update food quantity"})
+		return
+	}
+	c.JSON(http.StatusOK, food)
+
+}
