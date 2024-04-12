@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"order-service/internals/handlers"
+	//"order-service/internals/messaging"
 	"order-service/internals/models"
 	"order-service/internals/repository"
 
@@ -53,6 +54,7 @@ func main() {
 	// Inicialização do repositório e handlers
 	orderRepo := repository.NewOrderRepository(db)
 	orderHandler := handlers.NewOrderHandler(orderRepo, ch)
+	
 
 	// Configuração do servidor HTTP
 	router := gin.Default()
