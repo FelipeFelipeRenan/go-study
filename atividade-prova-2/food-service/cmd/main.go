@@ -1,71 +1,72 @@
 package main
 
 import (
+	"context"
+	"foods/internal/database"
 	"foods/internal/handlers"
-	// rabbitmq "foods/internal/messaging"
-	"foods/internal/models"
 	"foods/internal/repository"
+	"foods/internal/service"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
+	//"go-micro.dev/v4"
 )
 
 func main() {
-	foods := []models.Food{
-		{Name: "Lasanha", Category: "Massas", Quantity: 20, Price: 25.99, ExpirationAt: time.Now().AddDate(0, 1, 0)},          // Expira em 1 mês
-		{Name: "Sushi", Category: "Japonesa", Quantity: 30, Price: 30.50, ExpirationAt: time.Now().AddDate(0, 0, 15)},         // Expira em 15 dias
-		{Name: "Hambúrguer", Category: "Fast food", Quantity: 25, Price: 15.99, ExpirationAt: time.Now().AddDate(0, 0, 10)},   // Expira em 10 dias
-		{Name: "Salada Caesar", Category: "Saladas", Quantity: 15, Price: 12.75, ExpirationAt: time.Now().AddDate(0, 0, 5)},   // Expira em 5 dias
-		{Name: "Pizza", Category: "Italiana", Quantity: 40, Price: 18.99, ExpirationAt: time.Now().AddDate(0, 0, 20)},         // Expira em 20 dias
-		{Name: "Churrasco", Category: "Carnes", Quantity: 35, Price: 45.00, ExpirationAt: time.Now().AddDate(0, 2, 0)},        // Expira em 2 meses
-		{Name: "Sopa de legumes", Category: "Sopas", Quantity: 10, Price: 9.50, ExpirationAt: time.Now().AddDate(0, 0, 7)},    // Expira em 7 dias
-		{Name: "Tacos", Category: "Mexicana", Quantity: 20, Price: 12.99, ExpirationAt: time.Now().AddDate(0, 0, 25)},         // Expira em 25 dias
-		{Name: "Frango grelhado", Category: "Carnes", Quantity: 30, Price: 22.50, ExpirationAt: time.Now().AddDate(0, 1, 15)}, // Expira em 1 mês e 15 dias
-		{Name: "Ceviche", Category: "Frutos do mar", Quantity: 15, Price: 28.75, ExpirationAt: time.Now().AddDate(0, 0, 12)},  // Expira em 12 dias
+
+	db, err := database.SetupDatabase()
+	if err != nil {
+		log.Fatal("Erro ao conectar ao banco de dados")
+	}
+	// Crie um repositório e manipulador de alimentos
+	foodRepo := repository.NewFoodRepository(db)
+	foodService := service.NewFoodService(foodRepo)
+	foodHandler := handlers.NewFoodHandler(foodService)
+
+	// Implemente um servidor HTTP do Gin
+	router := gin.Default()
+
+	setupRoutes(router, foodHandler)
+
+	// Inicie o servidor Gin para lidar com as solicitações HTTP
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
 	}
 
-	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
-	if err != nil {
-		log.Fatal("Erro ao conectar ao banco de dados", err)
-	}
-	defer func() {
-		if sqlDB, err := db.DB(); err == nil {
-			sqlDB.Close()
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Failed to run Gin server", err)
 		}
 	}()
 
-	// Drop and create the table
-	db.Migrator().DropTable(&models.Food{})
-	if err := db.AutoMigrate(&models.Food{}); err != nil {
-		log.Fatal("Erro ao migrar modelo", err)
+	log.Println("Servidor HTTP iniciado em http://localhost:8080")
+
+	// Aguarde um sinal de interrupção para encerrar o servidor
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	<-c
+
+	log.Println("Encerrando o servidor...")
+
+	// Encerre o servidor HTTP do Gin
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Failed to shutdown Gin server", err)
 	}
 
-	log.Println("Tabela 'food' criada com sucesso")
-	for _, f := range foods {
-		if err := db.Create(&f).Error; err != nil {
-			log.Fatal("Erro ao inserir dados de seed para alimentos:", err)
-		}
-	}
-	log.Println("Seed de dados para participantes concluído com sucesso!")
+	log.Println("Servidor HTTP do Gin encerrado com sucesso")
 
+	log.Println("Servidor encerrado")
+}
 
-	foodRepo := repository.NewFoodRepository(db)
-	foodHandler := handlers.NewFoodHandler(foodRepo)
-
-	router := gin.Default()
-
-	router.GET("/foods/all", foodHandler.GetAllFoods)
-	router.GET("/foods/:id", foodHandler.GetFoodsByID)
-	router.GET("/foods/", foodHandler.GetAllFoodsByCategory)
-	router.POST("/foods", foodHandler.CreateFood)
-	router.PUT("/foods/:id", foodHandler.UpdateFood)
-	router.DELETE("/foods/:id", foodHandler.DeleteFood)
-
-	log.Println("Servidor iniciado em http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+func setupRoutes(router *gin.Engine, foodHandler *handlers.FoodHandler){
+	router.GET("/foods", foodHandler.GetAllFoods)
 }

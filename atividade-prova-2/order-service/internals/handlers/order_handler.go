@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	rabbitmq "order-service/internals/messaging"
 	"order-service/internals/models"
@@ -36,6 +37,10 @@ func (h *OrderHandler) CreateOrder(c *gin.Context)  {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error":"Error to publish order creation"})
 		return
+	} else {
+		log.Println("Canal sem erro!")
 	}
+
+	log.Println("Order Creation ")
 	c.JSON(http.StatusCreated, order)
 }

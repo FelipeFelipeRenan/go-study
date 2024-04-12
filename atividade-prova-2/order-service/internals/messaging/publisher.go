@@ -8,19 +8,19 @@ import (
 )
 
 const (
-	orderExchangeName  = "order_exchange"
-	orderQueueName = "order_created"
-	routingKey = "order_created"
+	orderExchangeName = "order_exchange"
+	orderQueueName    = "order_created" // Corrigindo o nome da fila para 'order_created'
+	routingKey        = "order_created"
 )
 
 func PublishOrderCreated(ch *amqp.Channel, order *models.Order) error {
 	err := ch.ExchangeDeclare(
-		orderExchangeName, 
-		"direct", 
-		true, 
-		false, 
-		false, 
-		false, 
+		orderExchangeName,
+		"direct",
+		true,
+		false,
+		false,
+		false,
 		nil,
 	)
 	if err != nil {
@@ -61,11 +61,14 @@ func PublishOrderCreated(ch *amqp.Channel, order *models.Order) error {
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
-			Body: []byte(orderJSON),
+			Body:        []byte(orderJSON),
 		},
 	)
+
 	if err != nil {
 		return err
 	}
-	return nil	
+
+	log.Println("Publisher iniciado")
+	return nil
 }
