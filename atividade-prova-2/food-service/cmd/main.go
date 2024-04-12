@@ -1,35 +1,32 @@
+//	"go-micro.dev/v4"
+
 package main
 
 import (
+
 	"foods/internal/handlers"
-	// rabbitmq "foods/internal/messaging"
 	"foods/internal/models"
 	"foods/internal/repository"
 	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-kit/kit/endpoint"
+	httptransport "github.com/go-kit/kit/transport/http"
 	"go-micro.dev/v4"
+	"go-micro.dev/v4/transport"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 func main() {
 	foods := []models.Food{
-		{Name: "Lasanha", Category: "Massas", Quantity: 20, Price: 25.99, ExpirationAt: time.Now().AddDate(0, 1, 0)},          // Expira em 1 mês
-		{Name: "Sushi", Category: "Japonesa", Quantity: 30, Price: 30.50, ExpirationAt: time.Now().AddDate(0, 0, 15)},         // Expira em 15 dias
-		{Name: "Hambúrguer", Category: "Fast food", Quantity: 25, Price: 15.99, ExpirationAt: time.Now().AddDate(0, 0, 10)},   // Expira em 10 dias
-		{Name: "Salada Caesar", Category: "Saladas", Quantity: 15, Price: 12.75, ExpirationAt: time.Now().AddDate(0, 0, 5)},   // Expira em 5 dias
-		{Name: "Pizza", Category: "Italiana", Quantity: 40, Price: 18.99, ExpirationAt: time.Now().AddDate(0, 0, 20)},         // Expira em 20 dias
-		{Name: "Churrasco", Category: "Carnes", Quantity: 35, Price: 45.00, ExpirationAt: time.Now().AddDate(0, 2, 0)},        // Expira em 2 meses
-		{Name: "Sopa de legumes", Category: "Sopas", Quantity: 10, Price: 9.50, ExpirationAt: time.Now().AddDate(0, 0, 7)},    // Expira em 7 dias
-		{Name: "Tacos", Category: "Mexicana", Quantity: 20, Price: 12.99, ExpirationAt: time.Now().AddDate(0, 0, 25)},         // Expira em 25 dias
-		{Name: "Frango grelhado", Category: "Carnes", Quantity: 30, Price: 22.50, ExpirationAt: time.Now().AddDate(0, 1, 15)}, // Expira em 1 mês e 15 dias
-		{Name: "Ceviche", Category: "Frutos do mar", Quantity: 15, Price: 28.75, ExpirationAt: time.Now().AddDate(0, 0, 12)},  // Expira em 12 dias
+		{Name: "Lasanha", Category: "Massas", Quantity: 20, Price: 25.99, ExpirationAt: time.Now().AddDate(0, 1, 0)},
+		{Name: "Sushi", Category: "Japonesa", Quantity: 30, Price: 30.50, ExpirationAt: time.Now().AddDate(0, 0, 15)},
+		// Adicione outros alimentos aqui
 	}
 
-	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{Logger: logger.Default.LogMode(logger.Info)})
+	db, err := gorm.Open(postgres.Open("host=db_foods user=postgres password=1234 dbname=foods_db port=5432 sslmode=disable"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("Erro ao conectar ao banco de dados", err)
 	}
@@ -38,7 +35,7 @@ func main() {
 			sqlDB.Close()
 		}
 	}()
-
+	
 	// Drop and create the table
 	db.Migrator().DropTable(&models.Food{})
 	if err := db.AutoMigrate(&models.Food{}); err != nil {
@@ -53,23 +50,70 @@ func main() {
 	}
 	log.Println("Seed de dados para participantes concluído com sucesso!")
 
-	
-	
+	// Crie um repositório e manipulador de alimentos
 	foodRepo := repository.NewFoodRepository(db)
 	foodHandler := handlers.NewFoodHandler(foodRepo)
-	
-	router := gin.Default()
-	
-	service := micro.NewService(micro.Name("foods"), micro.Version("latest"), micro.Address(":8080"), micro.Handle(router))
+
+	// Defina endpoints Go kit para suas operações
+	endpoints := handlers.MakeEndpoints(foodHandler)
+
+	// Crie um serviço Go kit que usa esses endpoints
+	service := micro.NewService(
+		micro.Name("foods"),
+		micro.Version("latest"),
+		micro.Address(":8080"),
+	)
 	service.Init()
 
-	router.GET("/foods/all", foodHandler.GetAllFoods)
-	router.GET("/foods/:id", foodHandler.GetFoodsByID)
-	router.GET("/foods/", foodHandler.GetAllFoodsByCategory)
-	router.POST("/foods", foodHandler.CreateFood)
-	router.PUT("/foods/:id", foodHandler.UpdateFood)
-	router.DELETE("/foods/:id", foodHandler.DeleteFood)
+	// Implemente um servidor HTTP do Gin
+	router := gin.Default()
 
-	log.Println("Servidor iniciado em http://localhost:8080")
-	service.Run()
+	// Roteie as solicitações HTTP para os endpoints do Go kit usando o httptransport
+	router.POST("/foods", gin.WrapH(httptransport.NewServer(
+		endpoints.CreateFoodEndpoint,
+		handlers.DecodeCreateFoodRequest,
+		handlers.EncodeResponse,
+	)))
+
+	router.GET("/foods/all", gin.WrapH(httptransport.NewServer(
+		endpoints.GetAllFoodsEndpoint,
+		handlers.DecodeGetAllFoodsRequest,
+		handlers.EncodeResponse,
+	)))
+
+	router.GET("/foods/:id", gin.WrapH(httptransport.NewServer(
+		endpoints.GetFoodsByIDEndpoint,
+		handlers.DecodeGetFoodsByIDRequest,
+		handlers.EncodeResponse,
+	)))
+
+	router.GET("/foods/", gin.WrapH(httptransport.NewServer(
+		endpoints.GetAllFoodsByCategoryEndpoint,
+		handlers.DecodeGetAllFoodsByCategoryRequest,
+		handlers.EncodeResponse,
+	)))
+
+	router.PUT("/foods/:id", gin.WrapH(httptransport.NewServer(
+		endpoints.UpdateFoodEndpoint,
+		handlers.DecodeUpdateFoodRequest,
+		handlers.EncodeResponse,
+	)))
+
+	router.DELETE("/foods/:id", gin.WrapH(httptransport.NewServer(
+		endpoints.DeleteFoodEndpoint,
+		handlers.DecodeDeleteFoodRequest,
+		handlers.EncodeResponse,
+	)))
+
+	// Inicie o serviço Go kit em uma goroutine separada
+	go func() {
+		if err := service.Run(); err != nil {
+			log.Fatal("Failed to run Go kit service", err)
+		}
+	}()
+
+	// Inicie o servidor Gin para lidar com as solicitações HTTP
+	if err := router.Run(":8081"); err != nil {
+		log.Fatal("Failed to run Gin server", err)
+	}
 }
