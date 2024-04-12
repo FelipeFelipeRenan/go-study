@@ -6,10 +6,10 @@ import (
 	"foods/internal/models"
 	"foods/internal/repository"
 	"log"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"go-micro.dev/v4"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -53,11 +53,15 @@ func main() {
 	}
 	log.Println("Seed de dados para participantes concluído com sucesso!")
 
-
+	
+	
 	foodRepo := repository.NewFoodRepository(db)
 	foodHandler := handlers.NewFoodHandler(foodRepo)
-
+	
 	router := gin.Default()
+	
+	service := micro.NewService(micro.Name("foods"), micro.Version("latest"), micro.Address(":8080"), micro.Handle(router))
+	service.Init()
 
 	router.GET("/foods/all", foodHandler.GetAllFoods)
 	router.GET("/foods/:id", foodHandler.GetFoodsByID)
@@ -67,5 +71,5 @@ func main() {
 	router.DELETE("/foods/:id", foodHandler.DeleteFood)
 
 	log.Println("Servidor iniciado em http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	service.Run()
 }
