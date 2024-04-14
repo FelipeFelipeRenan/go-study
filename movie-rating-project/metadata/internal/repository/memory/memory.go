@@ -3,7 +3,7 @@ package memory
 import (
 	"context"
 	"movieexample/metadata/internal/repository"
-	model "movieexample/metadata/pkg"
+	model "movieexample/metadata/pkg/model"
 	"sync"
 )
 
