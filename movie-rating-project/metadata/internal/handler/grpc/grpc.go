@@ -18,7 +18,7 @@ type Handler struct {
 }
 
 // New creates a new movie metadata gRPC handler
-func New(ctrl *metadata.Controller) *Handler {go mo
+func New(ctrl *metadata.Controller) *Handler {
 	return &Handler{crtl: ctrl}
 }
 
