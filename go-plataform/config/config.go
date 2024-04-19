@@ -7,9 +7,9 @@ type Configuration interface {
 	GetFloat(name string)(configValue float64, found bool)
 
 	GetStringDefault(name string, defVal string )(configValue string)
-	GetIntDefault(name string, defVal int)(configValue string)
-	GetBoolDefault(name string, defVal bool)(configValue string)
-	GetFloatDefault(name string, defVal float64)(configValue string)
+	GetIntDefault(name string, defVal int)(configValue int)
+	GetBoolDefault(name string, defVal bool)(configValue bool)
+	GetFloatDefault(name string, defVal float64)(configValue float64)
 
 	GetSection(sectionName string)(section Configuration, found bool)
 }
