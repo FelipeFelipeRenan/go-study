@@ -17,7 +17,7 @@ func (s *Stack) Pop() (el any, err error) {
 	}
 	el = s.elements[len(s.elements)-1]
 	s.elements = s.elements[:len(s.elements)-1]
-	return
+	return 
 }
 
 func (s *Stack) Peek() (el any, err error) {
