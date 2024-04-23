@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package food;
+
+service FoodService {
+    rpc GetAllFood (GetAllFoodRequest) returns (FoodResponse);
+    rpc CreateFood (CreateFoodRequest) returns (FoodResponse);
+    rpc GetFood (GetFoodRequest) returns (FoodResponse);
+    rpc UpdateFood (UpdateFoodRequest) returns (FoodResponse);
+    rpc DeleteFood (DeleteFoodRequest) returns (DeleteFoodResponse);
+}
+
+message CreateFoodRequest {
+    string name = 1;
+    string category = 2;
+    uint32 quantity = 3;
+}
+
+message GetAllFoodRequest{
+
+}
+
+message GetFoodRequest {
+    uint32 id = 1;
+}
+
+message UpdateFoodRequest{
+    uint32 id = 1;
+    string name = 2;
+    string category = 3; 
+    uint32 quantity = 4;
+}
+
+message DeleteFoodRequest{
+    uint32 id = 1;
+}
+
+message FoodResponse{
+    uint32 id = 1;
+    string name = 2;
+    string category = 3;
+    uint32 quantity = 4;
+}
+
+message DeleteFoodResponse{
+    bool success = 1;
+}
